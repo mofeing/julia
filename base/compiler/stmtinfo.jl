@@ -145,7 +145,7 @@ struct ConcreteResult <: ConstResult
 end
 
 struct SemiConcreteResult <: ConstResult
-    mi::MethodInstance
+    edge::CodeInstance
     ir::IRCode
     effects::Effects
     spec_info::SpecInfo

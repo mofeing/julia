@@ -1455,7 +1455,7 @@ end
 
 function semiconcrete_result_item(result::SemiConcreteResult,
         @nospecialize(info::CallInfo), flag::UInt32, state::InliningState)
-    mi = result.mi
+    mi = result.edge.def
     et = InliningEdgeTracker(state)
 
     if (!OptimizationParams(state.interp).inlining || is_stmt_noinline(flag) ||
@@ -1478,7 +1478,7 @@ end
 
 function handle_semi_concrete_result!(cases::Vector{InliningCase}, result::SemiConcreteResult,
     match::MethodMatch, @nospecialize(info::CallInfo), flag::UInt32, state::InliningState)
-    mi = result.mi
+    mi = result.edge.def
     spec_types = match.spec_types
     validate_sparams(mi.sparam_vals) || return false
     item = semiconcrete_result_item(result, info, flag, state)

@@ -789,11 +789,12 @@ function typeinf_edge(interp::AbstractInterpreter, method::Method, @nospecialize
     end
     if frame === false
         # completely new, but check again after reserving in the engine
-        if cache_mode == CACHE_MODE_GLOBAL
-            ci = engine_reserve(interp, mi)
+        ci_from_engine = cache_mode == CACHE_MODE_GLOBAL ? engine_reserve(interp, mi) : nothing
+        if ci_from_engine !== nothing
             let codeinst = get(code_cache(interp), mi, nothing)
                 if codeinst isa CodeInstance # return existing rettype if the code is already inferred
-                    engine_reject(interp, ci)
+                    engine_reject(interp, ci_from_engine)
+                    ci_from_engine = nothing
                     inferred = @atomic :monotonic codeinst.inferred
                     if inferred === nothing && force_inline
                         cache_mode = CACHE_MODE_VOLATILE
@@ -805,15 +806,15 @@ function typeinf_edge(interp::AbstractInterpreter, method::Method, @nospecialize
             end
         end
         result = InferenceResult(mi, typeinf_lattice(interp))
-        if cache_mode == CACHE_MODE_GLOBAL
-            result.ci = ci
+        if ci_from_engine !== nothing
+            result.ci = ci_from_engine
         end
         frame = InferenceState(result, cache_mode, interp) # always use the cache for edge targets
         if frame === nothing
             add_remark!(interp, caller, "[typeinf_edge] Failed to retrieve source")
             # can't get the source for this, so we know nothing
-            if cache_mode == CACHE_MODE_GLOBAL
-                engine_reject(interp, ci)
+            if ci_from_engine !== nothing
+                engine_reject(interp, ci_from_engine)
             end
             return Future(EdgeCall_to_MethodCall_Result(interp, caller, method, EdgeCallResult(Any, Any, nothing, Effects()), edgecycle, edgelimited))
         end

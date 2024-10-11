@@ -1216,9 +1216,9 @@ function semi_concrete_eval_call(interp::AbstractInterpreter,
     mi::MethodInstance, result::MethodCallResult, arginfo::ArgInfo, sv::AbsIntState)
     world = frame_world(sv)
     mi_cache = WorldView(code_cache(interp), world)
-    code = get(mi_cache, mi, nothing)
-    if code !== nothing
-        irsv = IRInterpretationState(interp, code, mi, arginfo.argtypes, world)
+    codeinst = get(mi_cache, mi, nothing)
+    if codeinst !== nothing
+        irsv = IRInterpretationState(interp, codeinst, mi, arginfo.argtypes, world)
         if irsv !== nothing
             assign_parentchild!(irsv, sv)
             rt, (nothrow, noub) = ir_abstract_constant_propagation(interp, irsv)
@@ -1237,7 +1237,7 @@ function semi_concrete_eval_call(interp::AbstractInterpreter,
                     effects = Effects(effects; noub=ALWAYS_TRUE)
                 end
                 exct = refine_exception_type(result.exct, effects)
-                return ConstCallResults(rt, exct, SemiConcreteResult(mi, ir, effects, spec_info(irsv)), effects)
+                return ConstCallResults(rt, exct, SemiConcreteResult(codeinst, ir, effects, spec_info(irsv)), effects)
             end
         end
     end
