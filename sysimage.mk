@@ -66,11 +66,11 @@ $(build_private_libdir)/corecompiler.ji: $(COMPILER_SRCS)
 		--startup-file=no --warn-overwrite=yes -g$(BOOTSTRAP_DEBUG_LEVEL) -O1 compiler/compiler.jl)
 	@mv $@.tmp $@
 
-$(build_private_libdir)/sys.ji: $(build_private_libdir)/corecompiler.ji $(JULIAHOME)/VERSION $(BASE_SRCS) $(STDLIB_SRCS)
+$(build_private_libdir)/sys.ji: $(JULIAHOME)/VERSION $(COMPILER_SRCS) $(BASE_SRCS) $(STDLIB_SRCS)
 	@$(call PRINT_JULIA, cd $(JULIAHOME)/base && \
 	if ! JULIA_BINDIR=$(call cygpath_w,$(build_bindir)) WINEPATH="$(call cygpath_w,$(build_bindir));$$WINEPATH" \
 			$(call spawn, $(JULIA_EXECUTABLE)) -g1 -O1 -C "$(JULIA_CPU_TARGET)" $(HEAPLIM) --output-ji $(call cygpath_w,$@).tmp $(JULIA_SYSIMG_BUILD_FLAGS) \
-			--startup-file=no --warn-overwrite=yes --sysimage $(call cygpath_w,$<) sysimg.jl $(RELBUILDROOT); then \
+			--startup-file=no --warn-overwrite=yes sysimg.jl $(RELBUILDROOT); then \
 		echo '*** This error might be fixed by running `make clean`. If the error persists$(COMMA) try `make cleanall`. ***'; \
 		false; \
 	fi )

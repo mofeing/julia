@@ -346,30 +346,15 @@ function decode_effects(e::UInt32)
     return Effects(
         UInt8((e >> 0) & 0x07),
         UInt8((e >> 3) & 0x03),
-        _Bool((e >> 5) & 0x01),
-        _Bool((e >> 6) & 0x01),
-        _Bool((e >> 7) & 0x01),
+        Bool((e >> 5) & 0x01),
+        Bool((e >> 6) & 0x01),
+        Bool((e >> 7) & 0x01),
         UInt8((e >> 8) & 0x03),
         UInt8((e >> 10) & 0x03),
         UInt8((e >> 12) & 0x03),
-        _Bool((e >> 14) & 0x01))
+        Bool((e >> 14) & 0x01))
 end
 
-function encode_effects_override(eo::EffectsOverride)
-    e = 0x0000
-    eo.consistent          && (e |= (0x0001 << 0))
-    eo.effect_free         && (e |= (0x0001 << 1))
-    eo.nothrow             && (e |= (0x0001 << 2))
-    eo.terminates_globally && (e |= (0x0001 << 3))
-    eo.terminates_locally  && (e |= (0x0001 << 4))
-    eo.notaskstate         && (e |= (0x0001 << 5))
-    eo.inaccessiblememonly && (e |= (0x0001 << 6))
-    eo.noub                && (e |= (0x0001 << 7))
-    eo.noub_if_noinbounds  && (e |= (0x0001 << 8))
-    eo.consistent_overlay  && (e |= (0x0001 << 9))
-    eo.nortcall            && (e |= (0x0001 << 10))
-    return e
-end
 
 function decode_effects_override(e::UInt16)
     return EffectsOverride(

@@ -126,7 +126,7 @@ function CC.ipo_dataflow_analysis!(interp::EscapeAnalyzer, opt::OptimizationStat
         analyze_escapes(ir, nargs, 𝕃ₒ, get_escape_cache)
     catch err
         @error "error happened within EA, inspect `Main.failed_escapeanalysis`"
-        Main.failed_escapeanalysis = FailedAnalysis(ir, nargs, get_escape_cache)
+        Core.eval(Main, :(failed_escapeanalysis = $(FailedAnalysis(ir, nargs, get_escape_cache))))
         rethrow(err)
     end
     if caller.linfo === interp.entry_mi
@@ -174,10 +174,6 @@ end
 
 using Core: Argument, SSAValue
 using .CC: widenconst, singleton_type
-
-if EA._TOP_MOD === CC
-    Base.getindex(estate::EscapeState, @nospecialize(x)) = CC.getindex(estate, x)
-end
 
 function get_name_color(x::EscapeInfo, symbol::Bool = false)
     getname(x) = string(nameof(x))

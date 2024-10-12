@@ -129,15 +129,14 @@ convert(::Type{Any}, Core.@nospecialize x) = x
 convert(::Type{T}, x::T) where {T} = x
 include("coreio.jl")
 
+import Core: @doc, @__doc__, WrappedException, @int128_str, @uint128_str, @big_str, @cmd
+
+# core docsystem
+include("docs/core.jl")
+Core.atdoc!(CoreDocs.docm)
+
 eval(x) = Core.eval(Base, x)
 eval(m::Module, x) = Core.eval(m, x)
-
-# init core docsystem
-import Core: @doc, @__doc__, WrappedException, @int128_str, @uint128_str, @big_str, @cmd
-if isdefined(Core, :Compiler)
-    import Core.Compiler.CoreDocs
-    Core.atdoc!(CoreDocs.docm)
-end
 
 include("exports.jl")
 include("public.jl")
@@ -217,17 +216,6 @@ include("operators.jl")
 include("pointer.jl")
 include("refvalue.jl")
 include("cmem.jl")
-include("refpointer.jl")
-
-# now replace the Pair constructor (relevant for NamedTuples) with one that calls our Base.convert
-delete_method(which(Pair{Any,Any}, (Any, Any)))
-@eval function (P::Type{Pair{A, B}})(@nospecialize(a), @nospecialize(b)) where {A, B}
-    @inline
-    return $(Expr(:new, :P, :(a isa A ? a : convert(A, a)), :(b isa B ? b : convert(B, b))))
-end
-
-# The REPL stdlib hooks into Base using this Ref
-const REPL_MODULE_REF = Ref{Module}(Base)
 
 include("checked.jl")
 using .Checked
@@ -248,14 +236,50 @@ include("baseext.jl")
 
 include("c.jl")
 include("ntuple.jl")
+include("abstractset.jl")
+include("bitarray.jl")
+include("bitset.jl")
 include("abstractdict.jl")
 include("iddict.jl")
 include("idset.jl")
 include("iterators.jl")
-using .Iterators: zip, enumerate, only
+using .Iterators: zip, enumerate
 using .Iterators: Flatten, Filter, product  # for generators
-using .Iterators: Stateful    # compat (was formerly used in reinterpretarray.jl)
 include("namedtuple.jl")
+
+include("ordering.jl")
+using .Order
+
+include("compiler/compiler.jl")
+
+const _return_type = Compiler.return_type
+
+# Enable compiler
+Core.eval(Compiler, quote
+include("compiler/bootstrap.jl")
+ccall(:jl_set_typeinf_func, Cvoid, (Any,), typeinf_ext_toplevel)
+
+include("compiler/parsing.jl")
+Core._setparser!(fl_parse)
+end)
+
+include("reflection2.jl")
+
+include(Iterators, "iterators2.jl")
+using .Iterators: only, Stateful    # compat (was formerly used in reinterpretarray.jl)
+
+include("refpointer.jl")
+
+# now replace the Pair constructor (relevant for NamedTuples) with one that calls our Base.convert
+delete_method(which(Pair{Any,Any}, (Any, Any)))
+@eval function (P::Type{Pair{A, B}})(@nospecialize(a), @nospecialize(b)) where {A, B}
+    @inline
+    return $(Expr(:new, :P, :(a isa A ? a : convert(A, a)), :(b isa B ? b : convert(B, b))))
+end
+
+# The REPL stdlib hooks into Base using this Ref
+const REPL_MODULE_REF = Ref{Module}(Base)
+
 
 # For OS specific stuff
 # We need to strcat things here, before strings are really defined
@@ -327,13 +351,6 @@ include("reduce.jl")
 ## core structures
 include("reshapedarray.jl")
 include("reinterpretarray.jl")
-include("bitarray.jl")
-include("bitset.jl")
-
-if !isdefined(Core, :Compiler)
-    include("docs/core.jl")
-    Core.atdoc!(CoreDocs.docm)
-end
 
 include("multimedia.jl")
 using .Multimedia
@@ -342,7 +359,6 @@ using .Multimedia
 include("some.jl")
 
 include("dict.jl")
-include("abstractset.jl")
 include("set.jl")
 
 # Strings
@@ -480,10 +496,6 @@ include("accumulate.jl")
 include("permuteddimsarray.jl")
 using .PermutedDimsArrays
 
-# basic data structures
-include("ordering.jl")
-using .Order
-
 # Combinatorics
 include("sort.jl")
 using .Sort
@@ -561,9 +573,8 @@ include("docs/basedocs.jl")
 # Documentation -- should always be included last in sysimg.
 include("docs/Docs.jl")
 using .Docs
-if isdefined(Core, :Compiler) && is_primary_base_module
-    Docs.loaddocs(Core.Compiler.CoreDocs.DOCS)
-end
+Docs.loaddocs(CoreDocs.DOCS)
+@eval CoreDocs DOCS = DocLinkedList()
 
 include("precompilation.jl")
 
@@ -580,6 +591,9 @@ a_method_to_overwrite_in_test() = inferencebarrier(1)
 # nicer stacktraces. Modifications here have to be backported there
 include(mod::Module, _path::AbstractString) = _include(identity, mod, _path)
 include(mapexpr::Function, mod::Module, _path::AbstractString) = _include(mapexpr, mod, _path)
+
+# Compatibility with when Compiler was in Core
+@eval Core const Compiler = Main.Base.Compiler
 
 # External libraries vendored into Base
 Core.println("JuliaSyntax/src/JuliaSyntax.jl")
